@@ -12,9 +12,12 @@
         <a-assets>
             <a-asset-item id="raton-model" src="Raccoon.glb"></a-asset-item>
             <a-asset-item id="porte-model" src="Door.glb"></a-asset-item>
+            <a-asset-item id="tracteur-model" src="Tractor.glb"></a-asset-item>
+            <a-asset-item id="moto-model" src="Motorcycle.glb"></a-asset-item>
+            <a-asset-item id="cpu-model" src="CPU.glb"></a-asset-item>
         </a-assets>
 
-        <a-camera id="player-camera" position="0 1.5 2.5" rotation="0 180 0">
+        <a-camera id="player-camera" position="0 11.5 3" rotation="0 180 0">
             <a-cursor raycaster="objects: .clickable" color="red"></a-cursor>
         </a-camera>
 
@@ -111,6 +114,9 @@
 
             <a-box position="0 2.5 52" width="5" height="5" depth="0.1" color="#2c3e50"></a-box>
 
+            <a-gltf-model src="#porte-model" position="1 0 5" scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" position="1 0 41" scale="1.2 0.6 0.5"></a-gltf-model>
+
             <a-sphere id="btn-up-e1" class="clickable" position="0 1.5 49.5" radius="0.3" color="green"></a-sphere>
             <a-sphere id="btn-down-e1" class="clickable" position="0 1.5 2.5" radius="0.3" color="blue"></a-sphere>
 
@@ -160,6 +166,59 @@
             <a-box position="0 3.75 47" width="2" height="2.5" depth="0.1" color="#808b96"></a-box>
 
             <a-box position="0 2.5 52" width="5" height="5" depth="0.1" color="#2c3e50"></a-box>
+
+            <a-entity position="-5.8 1.5 7.5" rotation="0 90 0">
+                <a-plane width="3" height="2" material="color: #ff4444; opacity: 0.7; transparent: true">
+                    <a-text
+                        value="1. LE CERVEAU (CPU)\nC'est le composant qui execute les\ninstructions des programmes en\neffectuant des calculs binaires.\nIl traite des milliards de donnees\npar seconde via ses coeurs."
+                        align="center" width="2.8"></a-text>
+                </a-plane>
+            </a-entity>
+
+            <a-entity position="-5.8 1.5 11" rotation="0 90 0">
+                <a-plane width="3" height="2" material="color: #ffeb3b; opacity: 0.7; transparent: true">
+                    <a-text
+                        value="2. L'UNITE DE CONTROLE\nElle gere l'ordre d'execution.\nElle va chercher l'instruction (Fetch),\nla decode (Decode) et envoie\nl'ordre aux autres composants."
+                        color="black" align="center" width="2.8"></a-text>
+                </a-plane>
+            </a-entity>
+
+            <a-entity position="-5.8 1.5 14.5" rotation="0 90 0">
+                <a-plane width="3" height="2" material="color: #2196f3; opacity: 0.7; transparent: true">
+                    <a-text
+                        value="3. L'ALU (Calculateur)\nL'Unite Arithmetique et Logique.\nElle realise les operations de base\n(addition, soustraction) et les\ncomparaisons logiques (ET, OU)."
+                        align="center" width="2.8"></a-text>
+                </a-plane>
+            </a-entity>
+
+
+            <a-entity position="5.8 1.5 7.5" rotation="0 -90 0">
+                <a-plane width="3" height="2" material="color: #ff4444; opacity: 0.7; transparent: true">
+                    <a-text
+                        value="4. LES REGISTRES\nCe sont les memoires les plus\nrapides du monde. Elles stockent\ntemporairement les chiffres que\nl'ALU est en train de calculer."
+                        align="center" width="2.8"></a-text>
+                </a-plane>
+            </a-entity>
+
+            <a-entity position="5.8 1.5 11" rotation="0 -90 0">
+                <a-plane width="3" height="2" material="color: #ffeb3b; opacity: 0.7; transparent: true">
+                    <a-text
+                        value="5. L'HORLOGE INTERNE\nElle synchronise tout le systeme.\nSa vitesse se mesure en Hertz (GHz).\n3 GHz signifie que le CPU fait\n3 milliards de cycles par seconde."
+                        color="black" align="center" width="2.8"></a-text>
+                </a-plane>
+            </a-entity>
+
+            <a-entity position="5.8 1.5 14.5" rotation="0 -90 0">
+                <a-plane width="3" height="2" material="color: #2196f3; opacity: 0.7; transparent: true">
+                    <a-text
+                        value="6. LA MEMOIRE CACHE\nPlus lente que les registres mais\nplus rapide que la RAM. Elle garde\nles donnees souvent utilisees sous\nla main pour eviter les ralentissements."
+                        align="center" width="2.8"></a-text>
+                </a-plane>
+            </a-entity>
+
+            <a-gltf-model src="#porte-model" position="1 0 5" scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" position="1 0 41" scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" position="1 0 17" scale="1.2 0.6 0.5"></a-gltf-model>
 
             <a-sphere id="btn-up-e2" class="clickable" position="0 1.5 49.5" radius="0.3" color="green"></a-sphere>
             <a-sphere id="btn-down-e2" class="clickable" position="0 1.5 2.5" radius="0.3" color="blue"></a-sphere>
@@ -212,6 +271,9 @@
             <a-box position="0 2.5 52" width="5" height="5" depth="0.1" color="#2c3e50"></a-box>
 
 
+            <a-gltf-model src="#porte-model" position="1 0 5" scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" position="1 0 41" scale="1.2 0.6 0.5"></a-gltf-model>
+
             <a-sphere id="btn-up-e3" class="clickable" position="0 1.5 49.5" radius="0.3" color="green"></a-sphere>
             <a-sphere id="btn-down-e3" class="clickable" position="0 1.5 2.5" radius="0.3" color="blue"></a-sphere>
 
@@ -261,6 +323,9 @@
             <a-box position="0 3.75 47" width="2" height="2.5" depth="0.1" color="#808b96"></a-box>
 
             <a-box position="0 2.5 52" width="5" height="5" depth="0.1" color="#2c3e50"></a-box>
+
+            <a-gltf-model src="#porte-model" position="1 0 5" scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" position="1 0 41" scale="1.2 0.6 0.5"></a-gltf-model>
 
             <a-sphere id="btn-up-e4" class="clickable" position="0 1.5 49.5" radius="0.3" color="green"></a-sphere>
             <a-sphere id="btn-down-e4" class="clickable" position="0 1.5 2.5" radius="0.3" color="blue"></a-sphere>
@@ -352,15 +417,12 @@
                     const portePos = porte.getAttribute('position');
                     const dx = playerPos.x - portePos.x;
                     const dz = playerPos.z - portePos.z;
-                    let dy = playerPos.y - portePos.y;
-
-                    if (porte.closest('#etage5')) {
-                        dy -= 25;
-                    }
+                    const parentY = porte.parentEl.getAttribute('position').y || 0;
+                    const dy = playerPos.y - (portePos.y + parentY);
 
                     const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-                    if (distance < 3) { 
+                    if (distance < 3) {
                         const isOpen = porte.getAttribute('data-open') === 'true';
 
                         if (!isOpen) {
