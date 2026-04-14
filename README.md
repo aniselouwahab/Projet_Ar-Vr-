@@ -1,4 +1,4 @@
-Youssef GOURAR(Gay);
+Youssef GOURAR;
 Anis ABDOUELOUWAHAB;
-Mohamed BEN ABDELJELIL(gay avec Youssef);
+Mohamed BEN ABDELJELIL;
 Ruben TINANT
