@@ -1,0 +1,30 @@
+ 
+  <a-entity id="camera-rig" position="0 0 0" rotation="0 180 0">
+            <a-camera id="player-camera" position="0 1.5 -2.5">
+                <a-cursor raycaster="objects: .clickable" color="red"></a-cursor>
+            </a-camera>
+    </a-entity>
+        
+        
+        
+        
+    <script>
+        // On sélectionne le rig au lieu de la caméra pour le script
+        const rig = document.querySelector('#camera-rig');
+
+        function tp(y) {
+            // On déplace le rig (le parent), la caméra reste à +1.5 à l'intérieur
+            rig.setAttribute('position', {x: 0, y: y, z: 0});
+        }
+
+        document.querySelector('#btn-up-e0').addEventListener('click', () => tp(5));
+        document.querySelector('#btn-down-e1').addEventListener('click', () => tp(0));
+        document.querySelector('#btn-up-e1').addEventListener('click', () => tp(10));
+        document.querySelector('#btn-down-e2').addEventListener('click', () => tp(5));
+        document.querySelector('#btn-up-e2').addEventListener('click', () => tp(15));
+        document.querySelector('#btn-down-e3').addEventListener('click', () => tp(10));
+        document.querySelector('#btn-up-e3').addEventListener('click', () => tp(20));
+        document.querySelector('#btn-down-e4').addEventListener('click', () => tp(15));
+        document.querySelector('#btn-up-e4').addEventListener('click', () => tp(25));
+        document.querySelector('#btn-down-e5').addEventListener('click', () => tp(20));
+    </script>
