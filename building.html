@@ -6,129 +6,154 @@
     <title>Escape Building</title>
 </head>
 <body>
+    <audio id="background-audio" src="snk.mp3" preload="auto" loop></audio>
 
     <script>
-            AFRAME.registerComponent('simple-collision', {
-                init: function () {
-                    this.rig = document.querySelector('#camera-rig');
-                    const p = this.el.getAttribute('position');
-                    this.prevPos = { x: p.x, y: p.y, z: p.z };
-                    this.walls = [];
-    
-    
-                    this.el.sceneEl.addEventListener('loaded', () => {
-                        this.walls = Array.from(document.querySelectorAll('a-box')).filter(box => {
-                            const h = parseFloat(box.getAttribute('height') || 1);
-                            const w = parseFloat(box.getAttribute('width') || 1);
-                            const d = parseFloat(box.getAttribute('depth') || 1);
-                            return h >= 3 && (w <= 0.2 || d <= 0.2);
-                        });
-                    });
-                },
-                tick: function () {
-                    if (!this.walls.length) return;
-    
-                    const localPos = this.el.getAttribute('position');
-                    const rigPos = this.rig.getAttribute('position');
-    
-                    // Position monde du joueur (le rig est tourné de 180° sur Y)
-                    const px = rigPos.x - localPos.x;
-                    const py = localPos.y;
-                    const pz = rigPos.z - localPos.z;
-    
-                    const margin = 0.45;
-                    let blocked = false;
-    
-                    for (const wall of this.walls) {
-                        const wp = wall.getAttribute('position');
-                        const pp = wall.parentEl.getAttribute('position') || { x: 0, y: 0, z: 0 };
-    
-                        const wx = pp.x + wp.x;
-                        const wy = pp.y + wp.y;
-                        const wz = pp.z + wp.z;
-    
-                        const hw = parseFloat(wall.getAttribute('width')) / 2 + margin;
-                        const hh = parseFloat(wall.getAttribute('height')) / 2;
-                        const hd = parseFloat(wall.getAttribute('depth')) / 2 + margin;
-    
-                        if (Math.abs(py - wy) < hh &&
-                            Math.abs(px - wx) < hw &&
-                            Math.abs(pz - wz) < hd) {
-                            blocked = true;
-                            break;
-                        }
-                    }
-    
-                    if (blocked) {
-                        this.el.setAttribute('position', {
-                            x: this.prevPos.x,
-                            y: localPos.y,
-                            z: this.prevPos.z
-                        });
-                    } else {
-                        this.prevPos = { x: localPos.x, y: localPos.y, z: localPos.z };
-                    }
-                }
+        AFRAME.registerComponent('simple-collision', {
+        init: function () {
+            this.prevPos = new THREE.Vector3();
+            this.walls = [];
+            this.playerRadius = 0.45; // rayon approximatif du joueur
+            this.playerHeight = 1.8;   // hauteur de la caméra (yeux)
+
+            this.el.sceneEl.addEventListener('loaded', () => {
+            // Sélectionne tous les murs (a-box de hauteur >= 3 et épaisseur faible)
+            this.walls = Array.from(document.querySelectorAll('a-box')).filter(box => {
+                const h = parseFloat(box.getAttribute('height') || 1);
+                const w = parseFloat(box.getAttribute('width') || 1);
+                const d = parseFloat(box.getAttribute('depth') || 1);
+                return h >= 3 && (w <= 0.5 || d <= 0.5);
             });
-
-            // Composant saut — attaché sur la caméra, utilise tick A-Frame
-            AFRAME.registerComponent('jump-control', {
-                init: function () {
-                    this.enLair = false;
-                    this.vitesse = 0;
-                    this.GRAVITY = -0.012;
-                    this.JUMP_FORCE = 0.22;
-
-                    this._onKeyDown = (e) => {
-                        if (e.code === 'Space' && !this.enLair) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            this.enLair = true;
-                            this.vitesse = this.JUMP_FORCE;
-                        }
-                    };
-                    window.addEventListener('keydown', this._onKeyDown, true);
-                },
-                remove: function () {
-                    window.removeEventListener('keydown', this._onKeyDown, true);
-                },
-                // Retourne le Y de sol pour l'étage courant
-                getSolY: function () {
-                    const y = this.el.getAttribute('position').y;
-                    // Caméra à y=1.5 par étage, étages espacés de 5 unités
-                    const etages = [1.5, 6.5, 11.5, 16.5, 21.5];
-                    let sol = 1.5;
-                    let minDist = Infinity;
-                    for (const e of etages) {
-                        const d = Math.abs(y - e);
-                        if (d < minDist) { minDist = d; sol = e; }
-                    }
-                    return sol;
-                },
-                tick: function (time, delta) {
-                    if (!this.enLair) return;
-                    const dt = Math.min(delta, 50) / 1000; // secondes, max 50ms
-                    this.vitesse += this.GRAVITY;
-                    const pos = this.el.getAttribute('position');
-                    const solY = this.getSolY();
-                    const newY = pos.y + this.vitesse;
-
-                    if (newY <= solY) {
-                        this.el.setAttribute('position', { x: pos.x, y: solY, z: pos.z });
-                        this.vitesse = 0;
-                        this.enLair = false;
-                    } else {
-                        this.el.setAttribute('position', { x: pos.x, y: newY, z: pos.z });
-                    }
-                }
             });
+        },
+
+        tick: function () {
+            if (!this.walls.length) return;
+
+            const cam = this.el.object3D;
+            const worldPos = cam.getWorldPosition(new THREE.Vector3());
+            const playerMinY = worldPos.y - this.playerHeight / 2;
+            const playerMaxY = worldPos.y + this.playerHeight / 2;
+
+            let blockedX = false, blockedZ = false;
+
+            for (const wall of this.walls) {
+            const wallObj = wall.object3D;
+            const wallPos = wallObj.getWorldPosition(new THREE.Vector3());
+            const wallScale = wallObj.getWorldScale(new THREE.Vector3());
+            const wallHalf = new THREE.Vector3(
+                (parseFloat(wall.getAttribute('width')) * wallScale.x) / 2 + this.playerRadius,
+                (parseFloat(wall.getAttribute('height')) * wallScale.y) / 2,
+                (parseFloat(wall.getAttribute('depth')) * wallScale.z) / 2 + this.playerRadius
+            );
+
+            // Test de collision AABB
+            if (playerMaxY <= wallPos.y - wallHalf.y || playerMinY >= wallPos.y + wallHalf.y) continue;
+
+            const dx = worldPos.x - wallPos.x;
+            const dz = worldPos.z - wallPos.z;
+            const px = Math.abs(dx) - wallHalf.x;
+            const pz = Math.abs(dz) - wallHalf.z;
+
+            if (px < 0 && pz < 0) {
+                // Chevauchement, déterminer quel axe est le plus proche de la sortie
+                if (px > pz) {
+                blockedX = true;
+                } else {
+                blockedZ = true;
+                }
+            }
+            }
+
+            // Appliquer la contrainte de position
+            if (blockedX || blockedZ) {
+            const localPos = this.el.getAttribute('position');
+            if (blockedX) localPos.x = this.prevPos.x;
+            if (blockedZ) localPos.z = this.prevPos.z;
+            this.el.setAttribute('position', localPos);
+            } else {
+            const pos = this.el.getAttribute('position');
+            this.prevPos.set(pos.x, pos.y, pos.z);
+            }
+        }
+        });
+
+        AFRAME.registerComponent('jump-control', {
+        init: function () {
+            this.isJumping = false;
+            this.velocityY = 0;
+            this.gravity = -15.0;        // m/s²
+            this.jumpForce = 5.0;        // vitesse initiale vers le haut (m/s)
+            this.groundLevels = [1.5, 6.5, 11.5, 16.5, 21.5];
+
+            this._onKeyDown = (e) => {
+            if (e.code === 'Space' && !this.isJumping) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.isJumping = true;
+                this.velocityY = this.jumpForce;
+            }
+            };
+            window.addEventListener('keydown', this._onKeyDown);
+        },
+
+        remove: function () {
+            window.removeEventListener('keydown', this._onKeyDown);
+        },
+
+        getGroundY: function (currentY) {
+            let ground = this.groundLevels[0];
+            let minDist = Infinity;
+            for (const level of this.groundLevels) {
+            const dist = Math.abs(currentY - level);
+            if (dist < minDist) {
+                minDist = dist;
+                ground = level;
+            }
+            }
+            return ground;
+        },
+
+        tick: function (time, delta) {
+            if (!this.isJumping) return;
+
+            const dt = Math.min(delta, 50) / 1000; // secondes
+            this.velocityY += this.gravity * dt;
+            const pos = this.el.getAttribute('position');
+            const groundY = this.getGroundY(pos.y);
+            let newY = pos.y + this.velocityY * dt;
+
+            if (newY <= groundY) {
+            this.el.setAttribute('position', { x: pos.x, y: groundY, z: pos.z });
+            this.velocityY = 0;
+            this.isJumping = false;
+            } else {
+            this.el.setAttribute('position', { x: pos.x, y: newY, z: pos.z });
+            }
+        }
+        });
+
+        AFRAME.registerComponent('door-detector', {
+    init: function () {
+        const hint = document.querySelector('#door-hint');
+        this.el.addEventListener('raycaster-intersection', (e) => {
+            const intersectedEl = e.detail.els[0];
+            if (intersectedEl.classList.contains('porte')) {
+                hint.setAttribute('visible', true);
+            }
+        });
+        this.el.addEventListener('raycaster-intersection-cleared', () => {
+            hint.setAttribute('visible', false);
+        });
+    }
+});
         </script>
 
     <a-scene>
         <a-assets>
             <a-asset-item id="raton-model" src="objets_3d/Raccoon.glb"></a-asset-item>
             <a-asset-item id="porte-model" src="objets_3d/Door.glb"></a-asset-item>
-            //décorations 
+    <!-- decoration etage 1 et rdc-->
             <a-asset-item id="computer-room-model" src="objets_3d/Computer_Room.glb"></a-asset-item>
             <a-asset-item id="lustre-model" src="objets_3d/lustre.glb"></a-asset-item>
             <a-asset-item id="chandelier-model" src="objets_3d/chandelier.glb"></a-asset-item>
@@ -168,22 +193,32 @@
             <a-asset-item id="campfire-model" src="objets_3d/Campfire.glb"></a-asset-item>
             <a-asset-item id="mushrooms-model" src="objets_3d/Mushrooms.glb"></a-asset-item>
             <a-asset-item id="bush-model" src="objets_3d/Bush.glb"></a-asset-item>
-            <a-asset-item id="cpu-model" src="objets_3d/CPU.glb"></a-asset-item>     
+            <a-asset-item id="cpu-model" src="objets_3d/CPU.glb"></a-asset-item>
+            
+            <a-asset-item id="helico-model" src="objets_3d/helico.glb"></a-asset-item>     
+            <a-asset-item id="heliport-model" src="objets_3d/heliport.glb"></a-asset-item>     
+
         
         </a-assets>
        
         </a-assets>
 
-       <a-entity id="camera-rig" position="0 0 0" rotation="0 180 0">
-            <a-camera id="player-camera" position="0 1.5 -2.5" wasd-controls="acceleration: 20" simple-collision jump-control>
-                <a-cursor raycaster="objects: .clickable" color="red"></a-cursor>
-            </a-camera>
-        </a-entity>
+       <a-entity id="camera-rig" position="0 0 0" rotation="0 180 0"><a-camera id="player-camera" position="0 1.5 -2.5" wasd-controls="acceleration: 20" simple-collision jump-control> 
+        <a-cursor color="red" raycaster="objects: .clickable" door-detector></a-cursor>
+        <!-- Indicateur de porte (hint) -->
+        <a-text id="door-hint" value="Appuie sur E pour ouvrir" position="0 -0.8 -1.5" align="center" color="white" width="2" wrap-count="20" background-color="rgba(0,0,0,0.7)" visible="false"></a-text>
+    </a-camera>
+</a-entity>
 
         <a-sky src="puresky.jpg"></a-sky>
         <a-plane position="0 0 26" rotation="-90 0 0" width="25" height="55" src="brick.jpg"></a-plane>
 
         <a-entity id="etage0" position="0 0 0">
+
+            <!-- Portes RDC -->
+            <a-gltf-model src="#porte-model" class="clickable porte" position="1 0 5"  scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" class="clickable porte" position="1 0 41" scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" class="clickable porte" position="1 0 47" scale="1.2 0.6 0.5"></a-gltf-model>
 
             <a-box position="0 0 2.5"  width="5"  height="0.1" depth="5"  color="#2c3e50"></a-box>
             <a-box position="0 0 23"   width="16" height="0.1" depth="36" color="#ecf0f1"></a-box>
@@ -222,7 +257,7 @@
 
             <a-sphere id="btn-up-e0" class="clickable" position="0 1.5 49.5" radius="0.3" color="green"></a-sphere>
 
-            //décorations 
+            <!-- Décorations --> 
 
             <a-entity id="Computer_Room" gltf-model="#computer-room-model" position="-4.5 0.1 40.6" scale="0.25 0.25 0.25"></a-entity>        
             
@@ -307,9 +342,11 @@
             <a-sphere id="btn-up-e1" class="clickable" position="0 1.5 49.5" radius="0.3" color="green"></a-sphere>
             <a-sphere id="btn-down-e1" class="clickable" position="0 1.5 2.5" radius="0.3" color="blue"></a-sphere>
 
-            <a-gltf-model src="#porte-model" position="1 0 5"  scale="1.2 0.6 0.5"></a-gltf-model>
-            <a-gltf-model src="#porte-model" position="1 0 17" scale="1.2 0.6 0.5"></a-gltf-model>
-            <a-gltf-model src="#porte-model" position="1 0 41" scale="1.2 0.6 0.5"></a-gltf-model>
+            
+
+            <a-gltf-model src="#porte-model" class="clickable porte" position="1 0 5"  scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" class="clickable porte" position="1 0 17" scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-gltf-model src="#porte-model" class="clickable porte" position="1 0 41" scale="1.2 0.6 0.5"></a-gltf-model>
 
             <a-entity id="Skeleton" gltf-model="#skeleton-model" position="-2.7 -0.1 40.6" scale="0.8 0.8 0.8" rotation="0 180 0"></a-entity>        
             <a-entity id="Skeleton" gltf-model="#skeleton-model" position="3 -0.1 40.6" scale="0.8 0.8 0.8" rotation="0 180 0"></a-entity>        
@@ -409,10 +446,13 @@
             <a-plane id="bulle-demon" position="0.5 2.5 -1" width="3" height="1.2"
                 material="color: #2c3e50; opacity: 0.9; transparent: true" visible="false" rotation="0 160 0">
                 <a-text
-                    value="Pauvre fou... Tu crois pouvoir sortir ?\nSeul ton savoir pourra briser tes chaines.\nLis... ou reste ici pour l'éternité !"
+                    value="He toi ! Tu rames un peu, non ? Normal, il te manque une barrette de ram ! Trouve-la dans ce bazar et reponds a mes colles. Si tu echoues, je te transforme en processeur monocoeur de 1995 !"
                     align="center" width="2.8" color="#ecf0f1">
                 </a-text>
             </a-plane>
+            
+            <a-cone position="-0.2 2.75 0.5" radius-bottom="0.5" radius-top="0.1" height="1" color="red" opacity="0.9" transparent="true"
+                    rotation="180 90 0" animation="property: position; to: -0.2 2.85 0.5; dir: alternate; dur: 900; easing: easeInOutSine; loop: true"></a-cone>
             </a-entity>
 
 
@@ -475,7 +515,7 @@
 
         <a-entity id="etage2" position="0 10 0">
  
-            <a-box position="0 0 2.5" width="5" height="0.1" depth="5" color="#2c3e50"></a-box>
+            <a-box class="wall" position="0 0 2.5" width="5" height="0.1" depth="5" color="#2c3e50"></a-box>
             <a-box position="0 0 11" width="12" height="0.1" depth="12" color="#ecf0f1"></a-box>
             <a-box position="0 0 29" width="16" height="0.1" depth="24" color="#7f8c8d"></a-box>
             <a-box position="0 0 44" width="5" height="0.1" depth="6" color="#95a5a6"></a-box>
@@ -525,6 +565,9 @@
                 <a-gltf-model src="#raton-model" class="clickable" id="guide-raton" rotation="0 145 0"
                     scale="0.4 0.4 0.4">
                 </a-gltf-model>
+
+                <a-cone position="-0.2 2.5 0.5" radius-bottom="0.5" radius-top="0.1" height="1" color="#2c3e50" opacity="0.9" transparent="true"
+                    rotation="180 90 0" animation="property: position; to: -0.2 2.65 0.5; dir: alternate; dur: 900; easing: easeInOutSine; loop: true"></a-cone>
  
                 <a-plane id="bulle-dialogue" position="0 2 0" width="3" height="1.2"
                     material="color: #2c3e50; opacity: 0.9; transparent: true" visible="false" rotation="0 160 0">
@@ -652,16 +695,14 @@
  
  
         </a-entity>
-
-        <a-entity id="etage3" position="0 15 0">
  
+            <a-entity id="etage3" position="0 15 0">
+            <!-- Sol, murs, porte existants -->
             <a-box position="0 0 26" width="18" height="0.1" depth="54" color="#bfc4c9"></a-box>
- 
             <a-box position="-8.8 0.6 26" width="0.4" height="1.2" depth="54" color="#8e9aa5"></a-box>
             <a-box position="8.8 0.6 26" width="0.4" height="1.2" depth="54" color="#8e9aa5"></a-box>
             <a-box position="0 0.6 -0.8" width="18" height="1.2" depth="0.4" color="#8e9aa5"></a-box>
             <a-box position="0 0.6 52.8" width="18" height="1.2" depth="0.4" color="#8e9aa5"></a-box>
- 
             <a-box position="0 3.4 2.5" width="5" height="0.1" depth="5" color="#1a252f"></a-box>
             <a-box position="-2.5 1.7 2.5" width="0.1" height="3.4" depth="5" color="#2c3e50"></a-box>
             <a-box position=" 2.5 1.7 2.5" width="0.1" height="3.4" depth="5" color="#2c3e50"></a-box>
@@ -669,150 +710,482 @@
             <a-box position="-1.75 1.7 5" width="1.5" height="3.4" depth="0.1" color="#2c3e50"></a-box>
             <a-box position=" 1.75 1.7 5" width="1.5" height="3.4" depth="0.1" color="#2c3e50"></a-box>
             <a-box position="0 2.85 5" width="2" height="1.1" depth="0.1" color="#2c3e50"></a-box>
- 
             <a-gltf-model src="#porte-model" position="1 0 5" scale="1.2 0.6 0.5"></a-gltf-model>
- 
             <a-sphere id="btn-down-e3" class="clickable" position="0 1.5 2.5" radius="0.3" color="blue"></a-sphere>
+ 
+            <!-- Feu d'artifice (canvas 2D superposé) -->
+            <a-entity id="fireworks-anchor" position="0 5 20"></a-entity>
+ 
+            <!-- Décoration toit existante -->
+            <a-entity id="helico" gltf-model="#helico-model" position="-2 3 29" scale="0.7 0.7 0.7"
+                rotation="0 180 0"></a-entity>
+            <a-entity id="heliport" gltf-model="#heliport-model" position="0 0 30" scale="0.01 0.01 0.01"
+                rotation="0 180 0"></a-entity>
+ 
+            <!-- ===== TRAPPE DEVANT LE JOUEUR ===== -->
+            <a-box id="hatch-base" position="0 0.05 12" width="1.8" height="0.1" depth="1.8" color="#8B5A2B"
+                metalness="0.7" roughness="0.3"></a-box>
+            <a-box id="hatch-lid" class="clickable" position="0 0.25 12" width="1.6" height="0.1" depth="1.6"
+                color="#D2691E" metalness="0.4" roughness="0.2"></a-box>
+            <a-torus id="hatch-handle" class="clickable" position="0 0.35 12.2" radius="0.2" radius-tubular="0.03"
+                color="#FFD700" rotation="90 0 0"></a-torus>
+ 
+            <!-- Message BRAVO avec animations améliorées -->
+            <a-text id="win-message" value="BRAVO ! Tu as reussi le defi, tu peux monter dans l'helicoptere"
+                position="0 1.8 12" align="center" color="#FFD700" background-color="rgba(0,0,0,0.8)" width="5"
+                wrap-count="22" visible="false" scale="0.8 0.8 0.8" rotation="0 180 0">
+            </a-text>
+ 
+            <!-- Confettis -->
+            <a-entity id="confetti-effect" position="0 1.5 12" visible="false">
+                <a-particle-system color="#FFD700,#FF5733,#33FF57" particle-count="60" size="0.12" velocity="0 1.5 0"
+                    duration="2" acceleration="0 -2 0"></a-particle-system>
+            </a-entity>
         </a-entity>
     </a-scene>
 
-  <script>
-        document.querySelector('a-scene').addEventListener('loaded', function () {
-
-            // =============================================
-            // MASCOTTE RATON - clic pour afficher la bulle
-            // =============================================
-            const raton = document.querySelector('#guide-raton');
-            const bulleRaton = raton.parentEl.querySelector('#bulle-dialogue');
-
-            raton.addEventListener('click', () => {
-                const estVisible = bulleRaton.getAttribute('visible');
-                bulleRaton.setAttribute('visible', estVisible === true || estVisible === 'true' ? false : true);
-            });
-
-            // =============================================
-            // MASCOTTE DEMON - clic pour afficher la bulle
-            // =============================================
-            const demon = document.querySelector('#entite-demon');
-            const bulleDemon = document.querySelector('#bulle-demon');
-
-            demon.addEventListener('click', () => {
-                const estVisible = bulleDemon.getAttribute('visible');
-                bulleDemon.setAttribute('visible', estVisible === true || estVisible === 'true' ? false : true);
-            });
-
-            // =============================================
-            // QUIZ CPU (etage2)
-            // =============================================
-            const cpuTrigger = document.querySelector('#quiz-trigger');
-            const cpuUI = document.querySelector('#quiz-ui');
-            const cpuFeedback = document.querySelector('#quiz-feedback');
-
-            cpuTrigger.addEventListener('click', function () {
-                const isVisible = cpuUI.getAttribute('visible');
-                cpuUI.setAttribute('visible', isVisible === true || isVisible === 'true' ? false : true);
-                console.log("Clic sur CPU reconnu !");
-            });
-
-            function repondreCPU(correct) {
-                if (correct) {
-                    cpuFeedback.setAttribute('value', "CORRECT ! BRAVO");
-                    cpuFeedback.setAttribute('color', "#2ecc71");
-                } else {
-                    cpuFeedback.setAttribute('value', "FAUX ! REESSAIE");
-                    cpuFeedback.setAttribute('color', "#e74c3c");
-                }
-            }
-
-            document.querySelector('#opt-a').addEventListener('click', () => repondreCPU(false));
-            document.querySelector('#opt-b').addEventListener('click', () => repondreCPU(true));
-            document.querySelector('#opt-c').addEventListener('click', () => repondreCPU(false));
-
-            // =============================================
-            // QUIZ RAM (etage1)
-            // =============================================
-            const ramTrigger = document.querySelector('#ram-quiz-trigger');
-            const ramUI = document.querySelector('#ram-quiz-ui');
-            const ramFeedback = document.querySelector('#ram-quiz-feedback');
-
-            ramTrigger.addEventListener('click', function () {
-                const isVisible = ramUI.getAttribute('visible');
-                ramUI.setAttribute('visible', isVisible === true || isVisible === 'true' ? false : true);
-            });
-
-            function repondreRAM(correct) {
-                if (correct) {
-                    ramFeedback.setAttribute('value', "CORRECT ! BRAVO");
-                    ramFeedback.setAttribute('color', "#2ecc71");
-                } else {
-                    ramFeedback.setAttribute('value', "FAUX ! REESSAIE");
-                    ramFeedback.setAttribute('color', "#e74c3c");
-                }
-            }
-
-            document.querySelector('#ram-opt-a').addEventListener('click', () => repondreRAM(false));
-            document.querySelector('#ram-opt-b').addEventListener('click', () => repondreRAM(true));
-            document.querySelector('#ram-opt-c').addEventListener('click', () => repondreRAM(false));
-
+    <script>
+    document.querySelector('a-scene').addEventListener('loaded', function () {
+    
+        // =============================================
+        // MASCOTTE RATON - clic pour afficher la bulle
+        // =============================================
+        const raton = document.querySelector('#guide-raton');
+        const bulleRaton = raton.parentEl.querySelector('#bulle-dialogue');
+    
+        raton.addEventListener('click', () => {
+            const estVisible = bulleRaton.getAttribute('visible');
+            bulleRaton.setAttribute('visible', estVisible === true || estVisible === 'true' ? false : true);
         });
-
+    
         // =============================================
-        // TÉLÉPORTATION entre étages
+        // MASCOTTE DEMON - clic pour afficher la bulle
         // =============================================
-        const cam = document.querySelector('#player-camera');
-        function tp(y) {
-            cam.setAttribute('position', { x: 0, y: y + 1.5, z: -2.5 });
+        const demon = document.querySelector('#entite-demon');
+        const bulleDemon = document.querySelector('#bulle-demon');
+    
+        demon.addEventListener('click', () => {
+            const estVisible = bulleDemon.getAttribute('visible');
+            bulleDemon.setAttribute('visible', estVisible === true || estVisible === 'true' ? false : true);
+        });
+    
+        // =============================================
+        // QUIZ CPU (etage2) - 4 questions
+        // =============================================
+        const questionsCPU = [
+            {
+                question: "Quelle partie est la calculatrice ?",
+                options: ["A: UNITE DE CONTROLE", "B: ALU", "C: MEMOIRE CACHE"],
+                correct: 1
+            },
+            {
+                question: "Que fait l'Unite de Controle ?",
+                options: ["A: EFFECTUE DES CALCULS", "B: GERE L'EXECUTION", "C: STOCKE LES DONNEES"],
+                correct: 1
+            },
+            {
+                question: "Que mesure-t-on en GHz ?",
+                options: ["A: LA MEMOIRE CACHE", "B: LE NOMBRE DE COEURS", "C: L'HORLOGE INTERNE"],
+                correct: 2
+            },
+            {
+                question: "Ou sont stockees les donnees en cours de calcul ?",
+                options: ["A: DANS LES REGISTRES", "B: DANS LA RAM", "C: DANS LE DISQUE DUR"],
+                correct: 0
+            }
+        ];
+    
+        let cpuIndex = 0;
+        const cpuUI = document.querySelector('#quiz-ui');
+        const cpuFeedback = document.querySelector('#quiz-feedback');
+        const cpuTrigger = document.querySelector('#quiz-trigger');
+    
+        function afficherQuestionCPU(index) {
+            if (index >= questionsCPU.length) {
+                cpuFeedback.setAttribute('value', "BRAVO ! QUIZ TERMINE !");
+                cpuFeedback.setAttribute('color', "#f1c40f");
+                document.querySelector('#opt-a').setAttribute('visible', false);
+                document.querySelector('#opt-b').setAttribute('visible', false);
+                document.querySelector('#opt-c').setAttribute('visible', false);
+                cpuUI.querySelector('a-text[value]').setAttribute('value', "Quiz CPU complete !");
+                return;
+            }
+            const q = questionsCPU[index];
+            // Mettre a jour la question
+            cpuUI.querySelector('a-plane > a-text[position="0 0.7 0.1"]').setAttribute('value', q.question);
+            // Mettre a jour les options
+            document.querySelector('#opt-a').querySelector('a-text').setAttribute('value', q.options[0]);
+            document.querySelector('#opt-b').querySelector('a-text').setAttribute('value', q.options[1]);
+            document.querySelector('#opt-c').querySelector('a-text').setAttribute('value', q.options[2]);
+            // Remettre les couleurs par defaut
+            document.querySelector('#opt-a').setAttribute('color', '#34495e');
+            document.querySelector('#opt-b').setAttribute('color', '#34495e');
+            document.querySelector('#opt-c').setAttribute('color', '#34495e');
+            document.querySelector('#opt-a').setAttribute('visible', true);
+            document.querySelector('#opt-b').setAttribute('visible', true);
+            document.querySelector('#opt-c').setAttribute('visible', true);
+            cpuFeedback.setAttribute('value', "CHOISIS UNE REPONSE (" + (index+1) + "/" + questionsCPU.length + ")");
+            cpuFeedback.setAttribute('color', "#ecf0f1");
         }
-        document.querySelector('#btn-up-e0').addEventListener('click', () => tp(5));
-        document.querySelector('#btn-down-e1').addEventListener('click', () => tp(0));
-        document.querySelector('#btn-up-e1').addEventListener('click', () => tp(10));
-        document.querySelector('#btn-down-e2').addEventListener('click', () => tp(5));
-        document.querySelector('#btn-up-e2').addEventListener('click', () => tp(15));
-        document.querySelector('#btn-down-e3').addEventListener('click', () => tp(10));
-        document.querySelector('#btn-up-e3').addEventListener('click', () => tp(20));
-
+    
+        cpuTrigger.addEventListener('click', function () {
+            const isVisible = cpuUI.getAttribute('visible');
+            if (isVisible === true || isVisible === 'true') {
+                cpuUI.setAttribute('visible', false);
+            } else {
+                cpuIndex = 0;
+                afficherQuestionCPU(cpuIndex);
+                cpuUI.setAttribute('visible', true);
+            }
+        });
+    
+        function repondreCPU(choix) {
+            if (cpuIndex >= questionsCPU.length) return;
+            const correct = questionsCPU[cpuIndex].correct;
+            const opts = ['#opt-a', '#opt-b', '#opt-c'];
+            if (choix === correct) {
+                document.querySelector(opts[choix]).setAttribute('color', '#27ae60');
+                cpuFeedback.setAttribute('value', "CORRECT ! BRAVO !");
+                cpuFeedback.setAttribute('color', "#2ecc71");
+                cpuIndex++;
+                setTimeout(() => afficherQuestionCPU(cpuIndex), 1200);
+            } else {
+                document.querySelector(opts[choix]).setAttribute('color', '#c0392b');
+                cpuFeedback.setAttribute('value', "FAUX ! REESSAIE !");
+                cpuFeedback.setAttribute('color', "#e74c3c");
+            }
+        }
+    
+        document.querySelector('#opt-a').addEventListener('click', () => repondreCPU(0));
+        document.querySelector('#opt-b').addEventListener('click', () => repondreCPU(1));
+        document.querySelector('#opt-c').addEventListener('click', () => repondreCPU(2));
+    
         // =============================================
-        // OUVERTURE DES PORTES avec E
+        // QUIZ RAM (etage1) - 4 questions
         // =============================================
-        window.addEventListener('keydown', function (event) {
-            if (event.code === 'KeyE' || event.key.toLowerCase() === 'e') {
-                const rigPos = document.querySelector('#camera-rig').getAttribute('position');
-                const playerLocalPos = document.querySelector('#player-camera').getAttribute('position');
-                const playerPos = {
-                    x: rigPos.x - playerLocalPos.x,
-                    y: rigPos.y + playerLocalPos.y,
-                    z: rigPos.z - playerLocalPos.z
-                };
-                const portes = document.querySelectorAll('a-gltf-model[src="#porte-model"]');
+        const questionsRAM = [
+            {
+                question: "Que signifie RAM ?",
+                options: ["A: RANDOM ACCESS MEMORY", "B: RAPID ARRAY MODULE", "C: READ AND MOVE"],
+                correct: 0
+            },
+            {
+                question: "Que se passe-t-il quand on eteint le PC ?",
+                options: ["A: LA RAM SAUVEGARDE", "B: LA RAM S'EFFACE", "C: LA RAM SE COMPRESSE"],
+                correct: 1
+            },
+            {
+                question: "Quelle unite mesure la capacite RAM ?",
+                options: ["A: GHz", "B: WATTS", "C: GIGA-OCTETS (Go)"],
+                correct: 2
+            },
+            {
+                question: "Qu'est-ce que le Dual Channel ?",
+                options: ["A: DEUX PROCESSEURS", "B: DEUX BARRETTES EN PAIRE", "C: DEUX DISQUES DURS"],
+                correct: 1
+            }
+        ];
+    
+        let ramIndex = 0;
+        const ramUI = document.querySelector('#ram-quiz-ui');
+        const ramFeedback = document.querySelector('#ram-quiz-feedback');
+        const ramTrigger = document.querySelector('#ram-quiz-trigger');
+    
+        function afficherQuestionRAM(index) {
+            if (index >= questionsRAM.length) {
+                ramFeedback.setAttribute('value', "BRAVO ! QUIZ TERMINE !");
+                ramFeedback.setAttribute('color', "#f1c40f");
+                document.querySelector('#ram-opt-a').setAttribute('visible', false);
+                document.querySelector('#ram-opt-b').setAttribute('visible', false);
+                document.querySelector('#ram-opt-c').setAttribute('visible', false);
+                ramUI.querySelector('a-plane > a-text[position="0 0.7 0.1"]').setAttribute('value', "Quiz RAM complete !");
+                return;
+            }
+            const q = questionsRAM[index];
+            ramUI.querySelector('a-plane > a-text[position="0 0.7 0.1"]').setAttribute('value', q.question);
+            document.querySelector('#ram-opt-a').querySelector('a-text').setAttribute('value', q.options[0]);
+            document.querySelector('#ram-opt-b').querySelector('a-text').setAttribute('value', q.options[1]);
+            document.querySelector('#ram-opt-c').querySelector('a-text').setAttribute('value', q.options[2]);
+            document.querySelector('#ram-opt-a').setAttribute('color', '#34495e');
+            document.querySelector('#ram-opt-b').setAttribute('color', '#34495e');
+            document.querySelector('#ram-opt-c').setAttribute('color', '#34495e');
+            document.querySelector('#ram-opt-a').setAttribute('visible', true);
+            document.querySelector('#ram-opt-b').setAttribute('visible', true);
+            document.querySelector('#ram-opt-c').setAttribute('visible', true);
+            ramFeedback.setAttribute('value', "CHOISIS UNE REPONSE (" + (index+1) + "/" + questionsRAM.length + ")");
+            ramFeedback.setAttribute('color', "#ecf0f1");
+        }
+    
+        ramTrigger.addEventListener('click', function () {
+            const isVisible = ramUI.getAttribute('visible');
+            if (isVisible === true || isVisible === 'true') {
+                ramUI.setAttribute('visible', false);
+            } else {
+                ramIndex = 0;
+                afficherQuestionRAM(ramIndex);
+                ramUI.setAttribute('visible', true);
+            }
+        });
+    
+        function repondreRAM(choix) {
+            if (ramIndex >= questionsRAM.length) return;
+            const correct = questionsRAM[ramIndex].correct;
+            const opts = ['#ram-opt-a', '#ram-opt-b', '#ram-opt-c'];
+            if (choix === correct) {
+                document.querySelector(opts[choix]).setAttribute('color', '#27ae60');
+                ramFeedback.setAttribute('value', "CORRECT ! BRAVO !");
+                ramFeedback.setAttribute('color', "#2ecc71");
+                ramIndex++;
+                setTimeout(() => afficherQuestionRAM(ramIndex), 1200);
+            } else {
+                document.querySelector(opts[choix]).setAttribute('color', '#c0392b');
+                ramFeedback.setAttribute('value', "FAUX ! REESSAIE !");
+                ramFeedback.setAttribute('color', "#e74c3c");
+            }
+        }
+    
+        document.querySelector('#ram-opt-a').addEventListener('click', () => repondreRAM(0));
+        document.querySelector('#ram-opt-b').addEventListener('click', () => repondreRAM(1));
+        document.querySelector('#ram-opt-c').addEventListener('click', () => repondreRAM(2));
+    
+    }); // fin loaded
+    
+    // =============================================
+    // TÉLÉPORTATION entre étages
+    // =============================================
+    const cam = document.querySelector('#player-camera');
+    function tp(y) {
+        cam.setAttribute('position', { x: 0, y: y + 1.5, z: -2.5 });
+    }
+    document.querySelector('#btn-up-e0').addEventListener('click', () => tp(5));
+    document.querySelector('#btn-down-e1').addEventListener('click', () => tp(0));
+    document.querySelector('#btn-up-e1').addEventListener('click', () => tp(10));
+    document.querySelector('#btn-down-e2').addEventListener('click', () => tp(5));
+    document.querySelector('#btn-up-e2').addEventListener('click', () => tp(15));
+    document.querySelector('#btn-down-e3').addEventListener('click', () => tp(10));
+    
+    // =============================================
+    // PORTES - détection proximité + indicateur + touche E
+    // =============================================
+    const doorHint = document.getElementById('door-hint');
+    
+    function getWorldPlayerPos() {
+        const rig = document.querySelector('#camera-rig');
+        const camEl = document.querySelector('#player-camera');
+        const rp = rig.getAttribute('position');
+        const cp = camEl.getAttribute('position');
+        return {
+            x: rp.x - cp.x,
+            y: rp.y + cp.y,
+            z: rp.z - cp.z
+        };
+    }
+    
+    function getNearbyDoor(threshold) {
+        const pp = getWorldPlayerPos();
+        const portes = document.querySelectorAll('a-gltf-model[src="#porte-model"]');
+        for (const porte of portes) {
+            const parentPos = porte.parentEl.getAttribute('position') || { x: 0, y: 0, z: 0 };
+            const dp = porte.getAttribute('position');
+            const wx = (parentPos.x || 0) + dp.x;
+            const wy = (parentPos.y || 0) + dp.y;
+            const wz = (parentPos.z || 0) + dp.z;
+            const dist = Math.sqrt((pp.x - wx) ** 2 + (pp.y - wy) ** 2 + (pp.z - wz) ** 2);
+            if (dist < 3) return porte;
+        }
+        return null;
+    }
+    
+    // Vérification toutes les 200ms pour afficher/cacher le hint
+    setInterval(() => {
+        if (doorHint) {
+            doorHint.style.display = getNearbyDoor(3) ? 'block' : 'none';
+        }
+    }, 200);
+    
+    // Touche E pour ouvrir/fermer
+    window.addEventListener('keydown', function (e) {
+        if (e.code !== 'KeyE') return;
+        const porte = getNearbyDoor(3);
+        if (!porte) return;
+        const isOpen = porte.getAttribute('data-open') === 'true';
+        if (!isOpen) {
+            porte.setAttribute('animation', 'property: rotation; to: 0 90 0; dur: 600; easing: easeInOutQuad');
+            porte.setAttribute('data-open', 'true');
+        } else {
+            porte.setAttribute('animation', 'property: rotation; to: 0 0 0; dur: 600; easing: easeInOutQuad');
+            porte.setAttribute('data-open', 'false');
+        }
+    });
 
-                portes.forEach(porte => {
-                    const portePos = porte.getAttribute('position');
-                    const parentPos = porte.parentEl.getAttribute('position');
-                    const doorPos = {
-                        x: (parentPos.x || 0) + portePos.x,
-                        y: (parentPos.y || 0) + portePos.y,
-                        z: (parentPos.z || 0) + portePos.z
-                    };
-                    const dx = playerPos.x - doorPos.x;
-                    const dz = playerPos.z - doorPos.z;
-                    const dy = playerPos.y - doorPos.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-                    if (distance < 3) {
-                        const isOpen = porte.getAttribute('data-open') === 'true';
-                        if (!isOpen) {
-                            porte.setAttribute('animation', "property: rotation; to: 0 90 0; dur: 1000; easing: easeInOutQuad");
-                            porte.setAttribute('data-open', 'true');
-                        } else {
-                            porte.setAttribute('animation', "property: rotation; to: 0 0 0; dur: 1000; easing: easeInOutQuad");
-                            porte.setAttribute('data-open', 'false');
-                        }
-                    }
+    // ===== FEU D'ARTIFICE 2D (canvas superposé) =====
+    function lancerFeuDartifice() {
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+ 
+        const particules = [];
+        const couleurs = ['#FFD700','#FF4500','#FF69B4','#00BFFF','#32CD32','#FF1493','#ADFF2F','#FF6347','#7FFFD4','#FFA500'];
+ 
+        function createBurst(x, y) {
+            const nb = 80 + Math.random() * 60;
+            const couleur = couleurs[Math.floor(Math.random() * couleurs.length)];
+            for (let i = 0; i < nb; i++) {
+                const angle = (Math.PI * 2 * i) / nb + (Math.random() - 0.5) * 0.3;
+                const vitesse = 2 + Math.random() * 5;
+                particules.push({
+                    x, y,
+                    vx: Math.cos(angle) * vitesse,
+                    vy: Math.sin(angle) * vitesse,
+                    alpha: 1,
+                    taille: 2 + Math.random() * 3,
+                    couleur,
+                    decay: 0.012 + Math.random() * 0.01,
+                    gravity: 0.05 + Math.random() * 0.04,
+                    trail: []
                 });
             }
-        });
-
+        }
+ 
+        let bursts = 0;
+        const maxBursts = 18;
+        const burstInterval = setInterval(() => {
+            const x = canvas.width * (0.15 + Math.random() * 0.7);
+            const y = canvas.height * (0.1 + Math.random() * 0.5);
+            createBurst(x, y);
+            bursts++;
+            if (bursts >= maxBursts) clearInterval(burstInterval);
+        }, 400);
+ 
+        function animate() {
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+ 
+            for (let i = particules.length - 1; i >= 0; i--) {
+                const p = particules[i];
+                p.trail.push({ x: p.x, y: p.y, alpha: p.alpha });
+                if (p.trail.length > 6) p.trail.shift();
+ 
+                for (let t = 0; t < p.trail.length; t++) {
+                    const tp = p.trail[t];
+                    ctx.beginPath();
+                    ctx.arc(tp.x, tp.y, p.taille * (t / p.trail.length) * 0.7, 0, Math.PI * 2);
+                    ctx.fillStyle = p.couleur;
+                    ctx.globalAlpha = tp.alpha * (t / p.trail.length) * 0.4;
+                    ctx.fill();
+                }
+ 
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.taille, 0, Math.PI * 2);
+                ctx.fillStyle = p.couleur;
+                ctx.globalAlpha = p.alpha;
+                ctx.fill();
+ 
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += p.gravity;
+                p.vx *= 0.98;
+                p.alpha -= p.decay;
+ 
+                if (p.alpha <= 0) particules.splice(i, 1);
+            }
+            ctx.globalAlpha = 1;
+ 
+            if (particules.length > 0 || bursts < maxBursts) {
+                requestAnimationFrame(animate);
+            } else {
+                setTimeout(() => canvas.remove(), 500);
+            }
+        }
+        animate();
+    }
+    // ===================================================
+ 
+    let challengeCompleted = false;
+    let animationInterval = null;
+ 
+    function handleHatchOpen() {
+        const h = document.querySelector('#helico');
+ 
+        h.setAttribute('animation__rotate', 'property: rotation; from: 0 180 0; to: 0 1260 0; dur: 10000; easing: linear; loop: true');
+        h.setAttribute('animation__up', 'property: position; to: -2 15 29; dur: 3000; easing: easeInQuad');
+ 
+        setTimeout(() => {
+            h.setAttribute('animation__forward', 'property: position; from: -2 15 29; to: -10 50 200; dur: 7000; easing: easeInCubic');
+            h.setAttribute('animation__scale', 'property: scale; to: 0 0 0; dur: 7000; easing: easeInCubic');
+ 
+            setTimeout(() => {
+                if (h.parentNode) h.parentNode.removeChild(h);
+                // ===== FEU D'ARTIFICE après disparition hélico =====
+                lancerFeuDartifice();
+                // ===================================================
+            }, 7000);
+        }, 3000);
+ 
+        if (challengeCompleted) return;
+        const lid = document.querySelector('#hatch-lid');
+        const message = document.querySelector('#win-message');
+        const confetti = document.querySelector('#confetti-effect');
+        if (!lid) return;
+ 
+        lid.setAttribute('animation', 'property: rotation; to: -90 0 0; dur: 700; easing: ease-out; loop: false');
+        lid.classList.remove('clickable');
+        const handle = document.querySelector('#hatch-handle');
+        if (handle) handle.classList.remove('clickable');
+ 
+        setTimeout(() => {
+            if (message) {
+                message.setAttribute('visible', 'true');
+                message.setAttribute('animation', 'property: scale; from: 0.2 0.2 0.2; to: 1 1 1; dur: 500; easing: ease-out');
+ 
+                let step = 0;
+                const originalY = 1.8;
+                const colors = ["#FFD700", "#FF4500", "#32CD32", "#FF69B4", "#00BFFF"];
+                animationInterval = setInterval(() => {
+                    if (!message || message.getAttribute('visible') === 'false') {
+                        if (animationInterval) clearInterval(animationInterval);
+                        return;
+                    }
+                    step++;
+                    const newY = originalY + Math.sin(step * 0.15) * 0.1;
+                    message.setAttribute('position', { x: 0, y: newY, z: 12 });
+                    const colorIndex = Math.floor(step / 15) % colors.length;
+                    message.setAttribute('color', colors[colorIndex]);
+                    const scaleFactor = 1 + Math.sin(step * 0.4) * 0.05;
+                    message.setAttribute('scale', { x: scaleFactor, y: scaleFactor, z: scaleFactor });
+                }, 80);
+            }
+ 
+            if (confetti) {
+                confetti.setAttribute('visible', 'true');
+                setTimeout(() => { if (confetti) confetti.setAttribute('visible', 'false'); }, 2500);
+            }
+        }, 300);
+ 
+        setTimeout(() => {
+            if (message) {
+                if (animationInterval) clearInterval(animationInterval);
+                message.setAttribute('animation', 'property: scale; to: 0 0 0; dur: 600; easing: ease-in');
+                setTimeout(() => {
+                    if (message) message.setAttribute('visible', 'false');
+                }, 600);
+            }
+        }, 8000);
+ 
+        challengeCompleted = true;
+    }
+ 
+    const lidElement = document.querySelector('#hatch-lid');
+    const handleElement = document.querySelector('#hatch-handle');
+    if (lidElement) lidElement.addEventListener('click', handleHatchOpen);
+    if (handleElement) handleElement.addEventListener('click', handleHatchOpen);
+    if (lidElement) lidElement.classList.add('clickable');
+    if (handleElement) handleElement.classList.add('clickable');
     </script>
+ 
 
 </body>
 </html>
