@@ -215,6 +215,20 @@
 
         <a-entity id="etage0" position="0 0 0">
 
+                        <!-- Écran TV (devant le salon) -->
+            <a-entity position="-7.6 2 30" rotation="0 90 0">
+                <a-plane width="3.5" height="2.8" color="black" opacity="0.9">
+                    <a-text value="BIENVENUE AU Building \n\nPour vous echapper, vous devez parcourir les etages, resoudre des enigmes et affronter vos peurs.\n\nBonne chance..." align="center" color="#00ff00" width="3.3" wrap-count="30"></a-text>
+                </a-plane>
+            </a-entity>
+
+            <!-- Écran PC -->
+            <a-entity position="7.8 2.0 33.9" rotation="0 -90 0">
+                <a-plane width="3.5" height="2.6" color="#111" opacity="0.95">
+                    <a-text value="> SYSTEME D'EVASION\n> Objectif: Trouver la sortie sur le toit.\n> Des defis vous attendent...\n> Apprendre pour repondre !" align="left" color="#33ff33" width="4.3" height="2.5" position="-1.5 0 0"></a-text>
+                </a-plane>
+            </a-entity>
+
             <!-- Portes RDC -->
             <a-gltf-model src="#porte-model" class="clickable porte" position="1 0 5"  scale="1.2 0.6 0.5"></a-gltf-model>
             <a-gltf-model src="#porte-model" class="clickable porte" position="1 0 41" scale="1.2 0.6 0.5"></a-gltf-model>
