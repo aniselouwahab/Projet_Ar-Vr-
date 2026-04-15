@@ -1,0 +1,228 @@
+<!-- Étage 3 (toit) - TRAPPE + MESSAGE ANIMÉ -->
+        <a-entity id="etage3" position="0 15 0">
+            <!-- Sol, murs, porte existants -->
+            <a-box position="0 0 26" width="18" height="0.1" depth="54" color="#bfc4c9"></a-box>
+            <a-box position="-8.8 0.6 26" width="0.4" height="1.2" depth="54" color="#8e9aa5"></a-box>
+            <a-box position="8.8 0.6 26" width="0.4" height="1.2" depth="54" color="#8e9aa5"></a-box>
+            <a-box position="0 0.6 -0.8" width="18" height="1.2" depth="0.4" color="#8e9aa5"></a-box>
+            <a-box position="0 0.6 52.8" width="18" height="1.2" depth="0.4" color="#8e9aa5"></a-box>
+            <a-box position="0 3.4 2.5" width="5" height="0.1" depth="5" color="#1a252f"></a-box>
+            <a-box position="-2.5 1.7 2.5" width="0.1" height="3.4" depth="5" color="#2c3e50"></a-box>
+            <a-box position=" 2.5 1.7 2.5" width="0.1" height="3.4" depth="5" color="#2c3e50"></a-box>
+            <a-box position="0 1.7 0" width="5" height="3.4" depth="0.1" color="#2c3e50"></a-box>
+            <a-box position="-1.75 1.7 5" width="1.5" height="3.4" depth="0.1" color="#2c3e50"></a-box>
+            <a-box position=" 1.75 1.7 5" width="1.5" height="3.4" depth="0.1" color="#2c3e50"></a-box>
+            <a-box position="0 2.85 5" width="2" height="1.1" depth="0.1" color="#2c3e50"></a-box>
+            <a-gltf-model src="#porte-model" position="1 0 5" scale="1.2 0.6 0.5"></a-gltf-model>
+            <a-sphere id="btn-down-e3" class="clickable" position="0 1.5 2.5" radius="0.3" color="blue"></a-sphere>
+ 
+            <!-- Feu d'artifice (canvas 2D superposé) -->
+            <a-entity id="fireworks-anchor" position="0 5 20"></a-entity>
+ 
+            <!-- Décoration toit existante -->
+            <a-entity id="helico" gltf-model="#helico-model" position="-2 3 29" scale="0.7 0.7 0.7"
+                rotation="0 180 0"></a-entity>
+            <a-entity id="piste" gltf-model="#piste-model" position="0 0 30" scale="0.01 0.01 0.01"
+                rotation="0 180 0"></a-entity>
+ 
+            <!-- ===== TRAPPE DEVANT LE JOUEUR ===== -->
+            <a-box id="hatch-base" position="0 0.05 12" width="1.8" height="0.1" depth="1.8" color="#8B5A2B"
+                metalness="0.7" roughness="0.3"></a-box>
+            <a-box id="hatch-lid" class="clickable" position="0 0.25 12" width="1.6" height="0.1" depth="1.6"
+                color="#D2691E" metalness="0.4" roughness="0.2"></a-box>
+            <a-torus id="hatch-handle" class="clickable" position="0 0.35 12.2" radius="0.2" radius-tubular="0.03"
+                color="#FFD700" rotation="90 0 0"></a-torus>
+ 
+            <!-- Message BRAVO avec animations améliorées -->
+            <a-text id="win-message" value="BRAVO ! Tu as reussi le defi, tu peux monter dans l'helicoptere"
+                position="0 1.8 12" align="center" color="#FFD700" background-color="rgba(0,0,0,0.8)" width="5"
+                wrap-count="22" visible="false" scale="0.8 0.8 0.8" rotation="0 180 0">
+            </a-text>
+ 
+            <!-- Confettis -->
+            <a-entity id="confetti-effect" position="0 1.5 12" visible="false">
+                <a-particle-system color="#FFD700,#FF5733,#33FF57" particle-count="60" size="0.12" velocity="0 1.5 0"
+                    duration="2" acceleration="0 -2 0"></a-particle-system>
+            </a-entity>
+        </a-entity>
+    </a-scene>
+ 
+   <script>
+    const cam = document.querySelector('#player-camera');
+    function tp(y) {
+        cam.setAttribute('position', { x: 0, y: y + 1.5, z: 2.5 });
+    }
+    document.querySelector('#btn-up-e0').addEventListener('click', () => tp(5));
+    document.querySelector('#btn-down-e1').addEventListener('click', () => tp(0));
+    document.querySelector('#btn-up-e1').addEventListener('click', () => tp(10));
+    document.querySelector('#btn-down-e2').addEventListener('click', () => tp(5));
+    document.querySelector('#btn-up-e2').addEventListener('click', () => tp(15));
+    document.querySelector('#btn-down-e3').addEventListener('click', () => tp(10));
+ 
+    // ===== FEU D'ARTIFICE 2D (canvas superposé) =====
+    function lancerFeuDartifice() {
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+ 
+        const particules = [];
+        const couleurs = ['#FFD700','#FF4500','#FF69B4','#00BFFF','#32CD32','#FF1493','#ADFF2F','#FF6347','#7FFFD4','#FFA500'];
+ 
+        function createBurst(x, y) {
+            const nb = 80 + Math.random() * 60;
+            const couleur = couleurs[Math.floor(Math.random() * couleurs.length)];
+            for (let i = 0; i < nb; i++) {
+                const angle = (Math.PI * 2 * i) / nb + (Math.random() - 0.5) * 0.3;
+                const vitesse = 2 + Math.random() * 5;
+                particules.push({
+                    x, y,
+                    vx: Math.cos(angle) * vitesse,
+                    vy: Math.sin(angle) * vitesse,
+                    alpha: 1,
+                    taille: 2 + Math.random() * 3,
+                    couleur,
+                    decay: 0.012 + Math.random() * 0.01,
+                    gravity: 0.05 + Math.random() * 0.04,
+                    trail: []
+                });
+            }
+        }
+ 
+        let bursts = 0;
+        const maxBursts = 18;
+        const burstInterval = setInterval(() => {
+            const x = canvas.width * (0.15 + Math.random() * 0.7);
+            const y = canvas.height * (0.1 + Math.random() * 0.5);
+            createBurst(x, y);
+            bursts++;
+            if (bursts >= maxBursts) clearInterval(burstInterval);
+        }, 400);
+ 
+        function animate() {
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+ 
+            for (let i = particules.length - 1; i >= 0; i--) {
+                const p = particules[i];
+                p.trail.push({ x: p.x, y: p.y, alpha: p.alpha });
+                if (p.trail.length > 6) p.trail.shift();
+ 
+                for (let t = 0; t < p.trail.length; t++) {
+                    const tp = p.trail[t];
+                    ctx.beginPath();
+                    ctx.arc(tp.x, tp.y, p.taille * (t / p.trail.length) * 0.7, 0, Math.PI * 2);
+                    ctx.fillStyle = p.couleur;
+                    ctx.globalAlpha = tp.alpha * (t / p.trail.length) * 0.4;
+                    ctx.fill();
+                }
+ 
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.taille, 0, Math.PI * 2);
+                ctx.fillStyle = p.couleur;
+                ctx.globalAlpha = p.alpha;
+                ctx.fill();
+ 
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += p.gravity;
+                p.vx *= 0.98;
+                p.alpha -= p.decay;
+ 
+                if (p.alpha <= 0) particules.splice(i, 1);
+            }
+            ctx.globalAlpha = 1;
+ 
+            if (particules.length > 0 || bursts < maxBursts) {
+                requestAnimationFrame(animate);
+            } else {
+                setTimeout(() => canvas.remove(), 500);
+            }
+        }
+        animate();
+    }
+    // ===================================================
+ 
+    let challengeCompleted = false;
+    let animationInterval = null;
+ 
+    function handleHatchOpen() {
+        const h = document.querySelector('#helico');
+ 
+        h.setAttribute('animation__rotate', 'property: rotation; from: 0 180 0; to: 0 1260 0; dur: 10000; easing: linear; loop: true');
+        h.setAttribute('animation__up', 'property: position; to: -2 15 29; dur: 3000; easing: easeInQuad');
+ 
+        setTimeout(() => {
+            h.setAttribute('animation__forward', 'property: position; from: -2 15 29; to: -10 50 200; dur: 7000; easing: easeInCubic');
+            h.setAttribute('animation__scale', 'property: scale; to: 0 0 0; dur: 7000; easing: easeInCubic');
+ 
+            setTimeout(() => {
+                if (h.parentNode) h.parentNode.removeChild(h);
+                // ===== FEU D'ARTIFICE après disparition hélico =====
+                lancerFeuDartifice();
+                // ===================================================
+            }, 7000);
+        }, 3000);
+ 
+        if (challengeCompleted) return;
+        const lid = document.querySelector('#hatch-lid');
+        const message = document.querySelector('#win-message');
+        const confetti = document.querySelector('#confetti-effect');
+        if (!lid) return;
+ 
+        lid.setAttribute('animation', 'property: rotation; to: -90 0 0; dur: 700; easing: ease-out; loop: false');
+        lid.classList.remove('clickable');
+        const handle = document.querySelector('#hatch-handle');
+        if (handle) handle.classList.remove('clickable');
+ 
+        setTimeout(() => {
+            if (message) {
+                message.setAttribute('visible', 'true');
+                message.setAttribute('animation', 'property: scale; from: 0.2 0.2 0.2; to: 1 1 1; dur: 500; easing: ease-out');
+ 
+                let step = 0;
+                const originalY = 1.8;
+                const colors = ["#FFD700", "#FF4500", "#32CD32", "#FF69B4", "#00BFFF"];
+                animationInterval = setInterval(() => {
+                    if (!message || message.getAttribute('visible') === 'false') {
+                        if (animationInterval) clearInterval(animationInterval);
+                        return;
+                    }
+                    step++;
+                    const newY = originalY + Math.sin(step * 0.15) * 0.1;
+                    message.setAttribute('position', { x: 0, y: newY, z: 12 });
+                    const colorIndex = Math.floor(step / 15) % colors.length;
+                    message.setAttribute('color', colors[colorIndex]);
+                    const scaleFactor = 1 + Math.sin(step * 0.4) * 0.05;
+                    message.setAttribute('scale', { x: scaleFactor, y: scaleFactor, z: scaleFactor });
+                }, 80);
+            }
+ 
+            if (confetti) {
+                confetti.setAttribute('visible', 'true');
+                setTimeout(() => { if (confetti) confetti.setAttribute('visible', 'false'); }, 2500);
+            }
+        }, 300);
+ 
+        setTimeout(() => {
+            if (message) {
+                if (animationInterval) clearInterval(animationInterval);
+                message.setAttribute('animation', 'property: scale; to: 0 0 0; dur: 600; easing: ease-in');
+                setTimeout(() => {
+                    if (message) message.setAttribute('visible', 'false');
+                }, 600);
+            }
+        }, 8000);
+ 
+        challengeCompleted = true;
+    }
+ 
+    const lidElement = document.querySelector('#hatch-lid');
+    const handleElement = document.querySelector('#hatch-handle');
+    if (lidElement) lidElement.addEventListener('click', handleHatchOpen);
+    if (handleElement) handleElement.addEventListener('click', handleHatchOpen);
+    if (lidElement) lidElement.classList.add('clickable');
+    if (handleElement) handleElement.classList.add('clickable');
+</script>
