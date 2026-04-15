@@ -150,6 +150,24 @@
     }
 });
 
+    // Démarrage du son au premier clic ou touche
+    const bgAudio = document.getElementById('background-audio');
+    let audioStarted = false;
+
+    function startAudio() {
+        if (audioStarted) return;
+        bgAudio.play().then(() => {
+            audioStarted = true;
+            console.log('Son démarré');
+        }).catch(e => console.warn('Impossible de lancer le son :', e));
+        // On retire les écouteurs pour ne pas relancer
+        window.removeEventListener('click', startAudio);
+        window.removeEventListener('keydown', startAudio);
+    }
+
+    window.addEventListener('click', startAudio);
+    window.addEventListener('keydown', startAudio);
+
         
         </script>
 
