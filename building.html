@@ -8,6 +8,9 @@
 <body>
     <audio id="background-audio" src="snk.mp3" preload="auto" loop></audio>
     <audio id="error-audio" src="flop.mp3" preload="auto"></audio>
+    <audio id="elevator-audio" src="Ding.mp3" preload="auto"></audio>
+    <audio id="horror-audio" src="horreur.mp3" preload="auto" loop></audio>
+    <audio id="applause-audio" src="applaudissement.mp3" preload="auto"></audio>
 
     <script>
         AFRAME.registerComponent('simple-collision', {
@@ -1002,17 +1005,64 @@
     // =============================================
     // TÉLÉPORTATION entre étages
     // =============================================
+    // =============================================
+// TÉLÉPORTATION entre étages (avec son ascenseur)
+// =============================================
+    // =============================================
+// TÉLÉPORTATION entre étages (avec son ascenseur + musique d'ambiance)
+// =============================================
     const cam = document.querySelector('#player-camera');
-    function tp(y) {
-        cam.setAttribute('position', { x: 0, y: y + 1.5, z: -2.5 });
+    const elevatorSound = document.getElementById('elevator-audio');
+    const bgMusic = document.getElementById('background-audio');   // snk.mp3
+    const horrorMusic = document.getElementById('horror-audio');   // horreur.mp3
+
+    let currentFloor = 0; // 0 = RDC, 5 = Étage 1, 10 = Étage 2, 15 = Toit
+
+    function playElevatorSound() {
+        if (elevatorSound) {
+            elevatorSound.currentTime = 0;
+            elevatorSound.play().catch(e => console.warn("Son ascenseur bloqué :", e));
+        }
     }
+
+    function updateMusicForFloor(newFloorY) {
+        // newFloorY est la coordonnée Y du sol de l'étage (0, 5, 10, 15)
+        if (newFloorY === 5) {
+            // On entre dans l'étage 1 (horreur)
+            if (bgMusic && !bgMusic.paused) {
+                bgMusic.pause();
+            }
+            if (horrorMusic) {
+                horrorMusic.currentTime = 0;
+                horrorMusic.play().catch(e => console.warn("Son horreur bloqué :", e));
+            }
+        } else {
+            // On quitte l'étage 1 (ou on est ailleurs)
+            if (horrorMusic && !horrorMusic.paused) {
+                horrorMusic.pause();
+                horrorMusic.currentTime = 0;
+            }
+            // Reprendre la musique de fond si elle était lancée
+            if (bgMusic && bgMusic.paused && audioStarted) {
+                bgMusic.play().catch(e => console.warn("Reprise snk bloquée :", e));
+            }
+        }
+    }
+
+    function tp(y) {
+        playElevatorSound();
+        updateMusicForFloor(y);
+        cam.setAttribute('position', { x: 0, y: y + 1.5, z: -2.5 });
+        currentFloor = y;
+    }
+
     document.querySelector('#btn-up-e0').addEventListener('click', () => tp(5));
     document.querySelector('#btn-down-e1').addEventListener('click', () => tp(0));
     document.querySelector('#btn-up-e1').addEventListener('click', () => tp(10));
     document.querySelector('#btn-down-e2').addEventListener('click', () => tp(5));
     document.querySelector('#btn-up-e2').addEventListener('click', () => tp(15));
     document.querySelector('#btn-down-e3').addEventListener('click', () => tp(10));
-    
+
     // =============================================
     // PORTES - détection proximité + indicateur + touche E
     // =============================================
@@ -1069,6 +1119,19 @@
 
     // ===== FEU D'ARTIFICE 2D (canvas superposé) =====
     function lancerFeuDartifice() {
+    // Arrêter toutes les musiques d'ambiance
+    const bgMusic = document.getElementById('background-audio');
+    const horrorMusic = document.getElementById('horror-audio');
+    if (bgMusic) bgMusic.pause();
+    if (horrorMusic) horrorMusic.pause();
+    
+    // Jouer le son d'applaudissements
+    const applauseSound = document.getElementById('applause-audio');
+    if (applauseSound) {
+        applauseSound.currentTime = 0;
+        applauseSound.play().catch(e => console.warn("Applaudissements bloqués :", e));
+    }
+
     // Message de félicitations
     const congratsDiv = document.createElement('div');
     congratsDiv.style.cssText = 'position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);color:gold;font-size:3rem;font-weight:bold;text-shadow:2px 2px 4px black;z-index:10000;text-align:center;pointer-events:none;';
@@ -1081,7 +1144,6 @@
     creditsDiv.textContent = 'Projet réalisé par Youssef, Anis, Ruben, Mohamed';
     document.body.appendChild(creditsDiv);
     setTimeout(() => creditsDiv.remove(), 8000);
-
 
     // --- Suite du code du feu d'artifice (inchangé) ---
     const canvas = document.createElement('canvas');
