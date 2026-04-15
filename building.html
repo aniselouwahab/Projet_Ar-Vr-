@@ -7,6 +7,7 @@
 </head>
 <body>
     <audio id="background-audio" src="snk.mp3" preload="auto" loop></audio>
+    <audio id="error-audio" src="flop.mp3" preload="auto"></audio>
 
     <script>
         AFRAME.registerComponent('simple-collision', {
@@ -889,6 +890,12 @@
                 document.querySelector(opts[choix]).setAttribute('color', '#c0392b');
                 cpuFeedback.setAttribute('value', "FAUX ! REESSAIE !");
                 cpuFeedback.setAttribute('color', "#e74c3c");
+                // 🔴 Joue le son d'erreur
+                const errorSound = document.getElementById('error-audio');
+                if (errorSound) {
+                    errorSound.currentTime = 0; // rembobine pour les clics rapides
+                    errorSound.play();
+                }
             }
         }
     
@@ -977,6 +984,12 @@
                 document.querySelector(opts[choix]).setAttribute('color', '#c0392b');
                 ramFeedback.setAttribute('value', "FAUX ! REESSAIE !");
                 ramFeedback.setAttribute('color', "#e74c3c");
+                // 🔴 Joue le son d'erreur
+                const errorSound = document.getElementById('error-audio');
+                if (errorSound) {
+                    errorSound.currentTime = 0;
+                    errorSound.play();
+                }
             }
         }
     
