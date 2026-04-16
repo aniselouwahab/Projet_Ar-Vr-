@@ -1,0 +1,40 @@
+/* Ajout<!-- ===== SON DE L'HÉLICOPTÈRE ===== -->
+<!-- Fichier audio du rotor (format MP3 recommandé) -->
+<!-- preload="auto" : le son est chargé dès le début du jeu -->
+<!-- loop : la lecture se répète automatiquement -->
+<audio id="helico-audio" src="helicopter-rotor.mp3" preload="auto" loop></audio>
+
+
+
+function handleHatchOpen() {
+    const h = document.querySelector('#helico');
+
+    // ===== DÉMARRAGE DU SON DE L'HÉLICOPTÈRE =====
+    // On récupère l'élément audio créé plus haut
+    const helicoSound = document.getElementById('helico-audio');
+    if (helicoSound) {
+        // Remet la lecture au début (au cas où le son avait déjà été joué)
+        helicoSound.currentTime = 0;
+        // Lance la lecture du son en boucle
+        helicoSound.play().catch(e => console.warn("Son hélico bloqué :", e));
+    }
+
+    // Le reste du code de décollage suit...
+    h.setAttribute('animation__rotate', ...);
+    // ...
+
+
+    setTimeout(() => {
+    if (h.parentNode) h.parentNode.removeChild(h);
+    
+    // ===== ARRÊT DU SON APRÈS DISPARITION DE L'HÉLICOPTÈRE =====
+    // On coupe le bruit du rotor avant de lancer le feu d'artifice
+    const helicoSound = document.getElementById('helico-audio');
+    if (helicoSound) {
+        helicoSound.pause();        // Arrête la lecture
+        helicoSound.currentTime = 0; // Remet à zéro pour une prochaine partie
+    }
+    
+    lancerFeuDartifice();
+}, 7000); 
+
