@@ -50,8 +50,46 @@ J'ai participé à la mise en place de la musique de fond du jeu, intégrée via
 
 ---
 
+## Partie [Youssef Gourar]
+
+## 🎮 Contrôles
+
+| Action | Touche / Méthode |
+|--------|------------------|
+| Se déplacer | `Z Q S D` ou flèches directionnelles |
+| Sauter | `Barre d'espace` |
+| Ouvrir une porte | `E` (lorsque le message s'affiche) |
+| Interagir avec un quiz / un PNJ | Clic gauche |
+| Monter / Descendre d'étage | Cliquer sur les sphères vertes (⬆️) ou bleues (⬇️) |
+| Activer le son de fond | Premier clic ou première touche pressée |
+
+### Rez-de-chaussée (Étage 0)
+- **Portes fonctionnelles** (ouverture/fermeture avec la touche `E`).
+- **Collisions** avec les murs (composant `simple-collision`).
+- **Saut** entre les étages (composant `jump-control`).
+- Décorations : salon, billard, canapé, plantes, ordinateurs, etc.
+
+### Étage 1 – "Salle Horreur"
+- **Ambiance sonore spécifique** : à l'entrée, la musique `horreur.mp3` remplace la musique principale `snk.mp3`.
+- **Quiz RAM** : barrette de RAM interactive avec 4 questions. Un son `flop.mp3` retentit en cas d'erreur.
+- **PNJ Démon** : affiche une bulle de dialogue au clic.
+- **Éléments d'ambiance** : squelettes, zombies, hiboux, cercueil, sang, torches, etc.
+- **Portes** accessibles avec l'indicateur "Appuie sur E"
+
+### Fin du jeu (Toit)
+- **Message de victoire** : "🎉 BIEN JOUÉ ! VOUS AVEZ RÉUSSI À VOUS ÉCHAPPER ! 🎉"
+- **Crédits** : "Projet réalisé par Youssef, Anis, Ruben, Mohamed"
+- **Son d'applaudissements** (`applaudissement.mp3`) pendant le feu d'artifice.
+
+### Système audio complet
+- **Son d'ascenseur** (`Ding.mp3`) à chaque changement d'étage.
+- **Ambiance horreur** (`horreur.mp3`) uniquement à l'étage 1.
+- **Son d'erreur quiz** (`flop.mp3`).
+- **Applaudissements finaux** (`applaudissement.mp3`).
+
 ## Technologies utilisées
 
-- [A-Frame](https://aframe.io/) 1.5.0
-- JavaScript vanilla
-- Modèles 3D au format `.glb`
+- **[A-Frame](https://aframe.io/)** (v1.5.0) – framework web pour la 3D/VR.
+- **JavaScript vanilla** – logique des composants personnalisés (collisions, saut, détection de portes, fantôme suiveur, quiz).
+- **HTML5 Audio** – gestion des sons et musiques.
+- **GLB / glTF** – modèles 3D importés.
