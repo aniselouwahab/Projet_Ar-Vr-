@@ -230,7 +230,6 @@ Les textures `puresky.jpg` et `brick.jpg` sont également nécessaires.
 Pour une immersion totale, un effet sonore de rotor a été intégré :
 
 ### 1. Ajouter le fichier audio dans les `<a-assets>`
-(après la ligne `<img id="brick-img" ...>`)
 ```html
 <audio id="heli-sound" src="helicopter-rotor.mp3" preload="auto"></audio>
 
